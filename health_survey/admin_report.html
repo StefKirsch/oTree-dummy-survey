@@ -1,0 +1,138 @@
+<style>
+    .analytics-card {
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 20px;
+    }
+
+    .metric-row {
+        display: flex;
+        gap: 24px;
+        margin-bottom: 16px;
+    }
+
+    .metric {
+        padding: 12px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        min-width: 140px;
+    }
+
+    .metric-number {
+        font-size: 28px;
+        font-weight: bold;
+    }
+
+    .bar-track {
+        width: 100%;
+        height: 18px;
+        background: #eee;
+        border-radius: 4px;
+        overflow: hidden;
+    }
+
+    .bar-fill {
+        height: 18px;
+        background: #3366cc;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 8px;
+    }
+
+    th, td {
+        border-bottom: 1px solid #ddd;
+        padding: 6px;
+        text-align: left;
+    }
+</style>
+
+<h2>Teacher analytics - Current session: {{ session_name }}</h2>
+
+<div class="metric-row">
+    <div class="metric">
+        <div>Participants created</div>
+        <div class="metric-number">{{ n_created }}</div>
+    </div>
+
+    <div class="metric">
+        <div>Completed</div>
+        <div class="metric-number">{{ n_completed }}</div>
+    </div>
+
+    <div class="metric">
+        <div>Completion rate</div>
+        <div class="metric-number">{{ completion_pct }}%</div>
+    </div>
+</div>
+
+{{ for q in questions }}
+
+<div class="analytics-card">
+    <h3>{{ q.label }}</h3>
+
+    <p>
+        <strong>Mean:</strong> {{ q.mean }}
+        &nbsp; | &nbsp;
+        <strong>N:</strong> {{ q.n }}
+    </p>
+
+    <table>
+        <tr>
+            <th>Score</th>
+            <th>Count</th>
+            <th>Percent</th>
+            <th>Distribution</th>
+        </tr>
+
+        {{ for row in q.distribution }}
+        <tr>
+            <td>{{ row.score }}</td>
+            <td>{{ row.count }}</td>
+            <td>{{ row.pct }}%</td>
+            <td>
+                <div class="bar-track">
+                    <div class="bar-fill" style="width: {{ row.width }}%;"></div>
+                </div>
+            </td>
+        </tr>
+        {{ endfor }}
+    </table>
+</div>
+
+{{ endfor }}
+
+<div class="analytics-card">
+    <h3>Open comments</h3>
+
+    {{ if comments }}
+
+    <table>
+        <tr>
+            <th>Participant</th>
+            <th>Comment</th>
+        </tr>
+
+        {{ for c in comments }}
+        <tr>
+            <td>
+                {{ if c.participant_label }}
+                    {{ c.participant_label }}
+                {{ else }}
+                    P{{ c.participant_id }}
+                {{ endif }}
+            </td>
+            <td>{{ c.comment }}</td>
+        </tr>
+        {{ endfor }}
+    </table>
+
+    {{ else }}
+
+    <p>No comments submitted yet.</p>
+
+    {{ endif }}
+</div>

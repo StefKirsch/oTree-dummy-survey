@@ -2,7 +2,7 @@
 
 This is a minimal working prototype of a survey with custom analytics on the reports page.
 
-For this project to run you need Python 3.10 and uv installed.
+For this project to run you need [Python 3.10](https://conda-forge.org/download/) and [uv](https://docs.astral.sh/uv/getting-started/installation/#__tabbed_1_2) installed.
 
 ## Setup
 

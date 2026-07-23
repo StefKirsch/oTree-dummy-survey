@@ -2,10 +2,10 @@ from os import environ
 
 SESSION_CONFIGS = [
     dict(
-        name='cohort_survey',
-        display_name='Cohort Survey with Teacher Analytics',
-        app_sequence=['cohort_survey'],
-        num_demo_participants=10,
+        name='health_survey',
+        display_name='Healthcare System Stakeholder Simulation',
+        app_sequence=['health_survey'],
+        num_demo_participants=11,
     ),
 ]
 

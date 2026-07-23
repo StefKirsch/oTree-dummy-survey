@@ -1,8 +1,16 @@
-# oTree dummy survey
+# Healthcare-system stakeholder simulation
 
-This is a minimal working prototype of a survey with custom analytics on the reports page.
+This oTree proof of concept assigns participants one of 11 healthcare-system
+stakeholder roles. Each role receives a tailored Likert statement. After all
+participants answer, three aggregate impact plots show system alignment,
+accessible care, and innovation readiness on a 0–100 scale.
 
-For this project to run you need [Python 3.10](https://conda-forge.org/download/) and [uv](https://docs.astral.sh/uv/getting-started/installation/#__tabbed_1_2) installed.
+For 11 participants, each role is assigned once. In larger sessions the role
+sequence repeats. The shared `System alignment` metric includes all roles; the
+other two metrics use role subsets and explicit weights. Questions and weights
+are defined near the top of `health_survey/__init__.py`.
+
+For this project to run you need [Python 3.12](https://conda-forge.org/download/) and [uv](https://docs.astral.sh/uv/getting-started/installation/#__tabbed_1_2) installed.
 
 ## Setup
 

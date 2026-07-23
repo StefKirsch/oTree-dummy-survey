@@ -1,0 +1,13 @@
+{% if forloop.counter == 1 %}We-for-You
+{% elif forloop.counter == 2 %}Health Alliance
+{% elif forloop.counter == 3 %}GPs
+{% elif forloop.counter == 4 %}HMC
+{% elif forloop.counter == 5 %}Nurses
+{% elif forloop.counter == 6 %}Doctors
+{% elif forloop.counter == 7 %}Elderly care
+{% elif forloop.counter == 8 %}MedTech
+{% elif forloop.counter == 9 %}BigTech
+{% elif forloop.counter == 10 %}New Tech
+{% elif forloop.counter == 11 %}Patients
+{% else %}P{{ forloop.counter }}
+{% endif %}

@@ -2,14 +2,175 @@ from otree.api import *
 
 
 doc = """
-Your app description
+Proof-of-concept healthcare-system simulation. Participants are assigned a
+stakeholder role, answer a role-specific Likert question, and see three
+aggregate system-impact metrics.
 """
 
 
 class C(BaseConstants):
-    NAME_IN_URL = 'cohort_survey'
+    NAME_IN_URL = 'health_survey'
     PLAYERS_PER_GROUP = None
     NUM_ROUNDS = 1
+
+    LIKERT_CHOICES = [
+        [1, '1 – Strongly disagree'],
+        [2, '2 – Disagree'],
+        [3, '3 – Neither agree nor disagree'],
+        [4, '4 – Agree'],
+        [5, '5 – Strongly agree'],
+    ]
+
+
+# This is the single source of truth for role names and questions. The order
+# also determines how roles are allocated to participant numbers.
+ROLES = [
+    dict(
+        key='we_for_you',
+        name='We-for-You',
+        question=(
+            'Our coalition should prioritise initiatives that connect '
+            'organisations around shared healthcare-system goals.'
+        ),
+    ),
+    dict(
+        key='health_alliance',
+        name='Health Alliance',
+        question=(
+            'Regional health alliances should redirect more resources towards '
+            'prevention and population health.'
+        ),
+    ),
+    dict(
+        key='gps',
+        name='GPs',
+        question=(
+            'Primary care should receive more capacity to coordinate patients '
+            'across the healthcare system.'
+        ),
+    ),
+    dict(
+        key='hmc',
+        name='HMC',
+        question=(
+            'Hospitals should shift more resources from isolated specialist '
+            'production towards integrated care pathways.'
+        ),
+    ),
+    dict(
+        key='nurses',
+        name='Nurses',
+        question=(
+            'Nurses should have greater autonomy in care coordination and '
+            'service improvement.'
+        ),
+    ),
+    dict(
+        key='doctors',
+        name='Doctors',
+        question=(
+            'Doctors should standardise care pathways across organisations, '
+            'even when this limits some local discretion.'
+        ),
+    ),
+    dict(
+        key='elderly_care',
+        name='Elderly care',
+        question=(
+            'Elderly-care organisations should invest more in care at home '
+            'and cross-sector coordination.'
+        ),
+    ),
+    dict(
+        key='medtech',
+        name='MedTech',
+        question=(
+            'MedTech companies should prioritise interoperable solutions with '
+            'demonstrable patient value.'
+        ),
+    ),
+    dict(
+        key='bigtech',
+        name='BigTech',
+        question=(
+            'BigTech companies should share data infrastructure with health '
+            'partners under public governance.'
+        ),
+    ),
+    dict(
+        key='new_tech',
+        name='New Tech',
+        question=(
+            'Emerging health technologies should be adopted faster through '
+            'supervised real-world experiments.'
+        ),
+    ),
+    dict(
+        key='patients',
+        name='Patients',
+        question=(
+            'Patients should have greater influence over healthcare priorities '
+            'and resource allocation.'
+        ),
+    ),
+]
+
+ROLE_BY_KEY = {role['key']: role for role in ROLES}
+
+
+# A score of 1 maps to 0 impact points, 3 to 50, and 5 to 100. We first
+# average multiple participants with the same role, so every represented role
+# has the intended influence regardless of participant count.
+METRIC_DEFINITIONS = [
+    dict(
+        key='system_alignment',
+        name='System alignment',
+        short='Shared direction across the HCS',
+        color='#176B87',
+        weights={role['key']: 1.0 for role in ROLES},
+        formula='Equal-weight mean of all represented stakeholder roles.',
+    ),
+    dict(
+        key='accessible_care',
+        name='Accessible care',
+        short='Capacity, coordination and equitable access',
+        color='#C45A3B',
+        weights={
+            'we_for_you': 1.0,
+            'health_alliance': 1.2,
+            'gps': 1.4,
+            'hmc': 1.1,
+            'nurses': 1.4,
+            'doctors': 1.1,
+            'elderly_care': 1.3,
+            'patients': 1.3,
+        },
+        formula=(
+            'Weighted mean of care-delivery roles; GPs and nurses carry the '
+            'largest weights.'
+        ),
+    ),
+    dict(
+        key='innovation_readiness',
+        name='Innovation readiness',
+        short='Responsible adoption and interoperability',
+        color='#6B5CA5',
+        weights={
+            'health_alliance': 0.7,
+            'hmc': 1.0,
+            'nurses': 0.6,
+            'doctors': 0.8,
+            'medtech': 1.4,
+            'bigtech': 1.2,
+            'new_tech': 1.5,
+            'patients': 0.8,
+        },
+        formula=(
+            'Weighted mean of innovation roles; New Tech and MedTech carry '
+            'the largest weights.'
+        ),
+    ),
+]
 
 
 class Subsession(BaseSubsession):
@@ -21,76 +182,183 @@ class Group(BaseGroup):
 
 
 class Player(BasePlayer):
-    invest_in_healthcare = models.IntegerField(
-        choices=[
-            [1, '1 - Much less'],
-            [2, '2 - Less'],
-            [3, '3 - About the same'],
-            [4, '4 - More'],
-            [5, '5 - Much more'],
-        ],
+    stakeholder_role = models.StringField()
+    impact_choice = models.IntegerField(
+        choices=C.LIKERT_CHOICES,
         widget=widgets.RadioSelect,
-        label='Would you invest less or more in healthcare?',
+        label='',
     )
 
 
-def vars_for_admin_report(subsession):
-    session = subsession.session
-    participants = session.get_participants()
-    n_created = len(participants)
-    n_completed = sum(1 for p in participants if p.status == 'finished')
-    completion_pct = round((n_completed / n_created * 100) if n_created else 0, 1)
+def creating_session(subsession):
+    for player in subsession.get_players():
+        role = ROLES[(player.id_in_subsession - 1) % len(ROLES)]
+        player.stakeholder_role = role['key']
+        player.participant.vars['hcs_role'] = role['key']
 
-    players = subsession.get_players()
-    responses = [
-        p.field_maybe_none('invest_in_healthcare')
-        for p in players
-        if p.field_maybe_none('invest_in_healthcare') is not None
-    ]
-    total_responses = len(responses)
-    counts = {score: responses.count(score) for score in range(1, 6)}
-    mean = round(sum(responses) / total_responses, 2) if total_responses else 0
-    question = dict(
-        label='Would you invest less or more in healthcare?',
-        mean=mean,
-        n=total_responses,
-        distribution=[
+
+def _role_averages(players):
+    values_by_role = {role['key']: [] for role in ROLES}
+    for player in players:
+        choice = player.field_maybe_none('impact_choice')
+        if choice is not None and player.stakeholder_role in values_by_role:
+            values_by_role[player.stakeholder_role].append(choice)
+
+    return {
+        role_key: sum(values) / len(values)
+        for role_key, values in values_by_role.items()
+        if values
+    }
+
+
+def calculate_metrics(players):
+    role_averages = _role_averages(players)
+    metrics = []
+
+    for definition in METRIC_DEFINITIONS:
+        represented = {
+            role_key: weight
+            for role_key, weight in definition['weights'].items()
+            if role_key in role_averages
+        }
+        total_weight = sum(represented.values())
+
+        if total_weight:
+            weighted_likert = sum(
+                role_averages[role_key] * weight
+                for role_key, weight in represented.items()
+            ) / total_weight
+            value = round((weighted_likert - 1) * 25, 1)
+            display_value = value
+        else:
+            value = 0
+            display_value = '—'
+
+        metrics.append(
             dict(
-                score=score,
-                count=counts[score],
-                pct=round((counts[score] / total_responses * 100), 1)
-                if total_responses
-                else 0,
-                width=round((counts[score] / total_responses * 100), 1)
-                if total_responses
-                else 0,
+                key=definition['key'],
+                name=definition['name'],
+                short=definition['short'],
+                color=definition['color'],
+                value=value,
+                display_value=display_value,
+                formula=definition['formula'],
+                contributors=', '.join(
+                    '{} ×{:g}'.format(ROLE_BY_KEY[role_key]['name'], weight)
+                    for role_key, weight in definition['weights'].items()
+                ),
+                represented_count=len(represented),
+                possible_count=len(definition['weights']),
             )
-            for score in range(1, 6)
-        ],
-    )
+        )
 
-    return dict(
-        session_name=session.code,
-        n_created=n_created,
-        n_completed=n_completed,
-        completion_pct=completion_pct,
-        questions=[question],
-        comments=[],
-    )
+    return metrics
 
 
-# PAGES
+def role_rows(players):
+    averages = _role_averages(players)
+    rows = []
+    for role in ROLES:
+        role_players = [
+            player
+            for player in players
+            if player.stakeholder_role == role['key']
+            and player.field_maybe_none('impact_choice') is not None
+        ]
+        average = averages.get(role['key'])
+        rows.append(
+            dict(
+                name=role['name'],
+                question=role['question'],
+                n=len(role_players),
+                mean=round(average, 2) if average is not None else '—',
+            )
+        )
+    return rows
+
+
 class Survey(Page):
     form_model = 'player'
-    form_fields = ['invest_in_healthcare']
+    form_fields = ['impact_choice']
+
+    @staticmethod
+    def vars_for_template(player):
+        return dict(role=ROLE_BY_KEY[player.stakeholder_role])
 
 
 class ResultsWaitPage(WaitPage):
-    pass
+    title_text = 'Waiting for the healthcare system'
+    body_text = 'The combined system impact will appear when everyone has responded.'
 
 
-class ThankYou(Page):
-    pass
+class Results(Page):
+    @staticmethod
+    def vars_for_template(player):
+        return dict(
+            role=ROLE_BY_KEY[player.stakeholder_role],
+            metrics=calculate_metrics(player.subsession.get_players()),
+        )
 
 
-page_sequence = [Survey, ResultsWaitPage, ThankYou]
+page_sequence = [Survey, ResultsWaitPage, Results]
+
+
+def vars_for_admin_report(subsession):
+    players = subsession.get_players()
+    completed_players = [
+        player
+        for player in players
+        if player.field_maybe_none('impact_choice') is not None
+    ]
+
+    return dict(
+        session_name=subsession.session.config.get(
+            'display_name', subsession.session.config['name']
+        ),
+        n_created=len(players),
+        n_completed=len(completed_players),
+        completion_pct=(
+            round(100 * len(completed_players) / len(players), 1)
+            if players
+            else 0
+        ),
+        metrics=calculate_metrics(players),
+        roles=role_rows(players),
+    )
+
+
+def custom_export(players):
+    yield [
+        'session_code',
+        'participant_code',
+        'participant_label',
+        'role_key',
+        'role_name',
+        'custom_question',
+        'impact_choice',
+        'system_alignment',
+        'accessible_care',
+        'innovation_readiness',
+    ]
+
+    players = list(players)
+    metrics = {
+        metric['key']: metric['display_value']
+        for metric in calculate_metrics(players)
+    }
+    for player in players:
+        role = ROLE_BY_KEY.get(
+            player.stakeholder_role, dict(name='', question='')
+        )
+        yield [
+            player.session.code,
+            player.participant.code,
+            player.participant.label,
+            player.stakeholder_role,
+            role['name'],
+            role['question'],
+            player.field_maybe_none('impact_choice'),
+            metrics['system_alignment'],
+            metrics['accessible_care'],
+            metrics['innovation_readiness'],
+        ]

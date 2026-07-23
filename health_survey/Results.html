@@ -1,0 +1,110 @@
+{{ block title }}
+Healthcare-system impact
+{{ endblock }}
+
+{{ block content }}
+
+<style>
+    .results-intro {
+        max-width: 760px;
+        color: #455b60;
+    }
+    .metric-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+        gap: 1.25rem;
+        margin: 1.75rem 0;
+    }
+    .metric-card {
+        border: 1px solid #dce4e5;
+        border-radius: 14px;
+        padding: 1.35rem;
+        text-align: center;
+        background: #fff;
+        box-shadow: 0 5px 18px rgba(22, 54, 60, .06);
+    }
+    .impact-ring {
+        --value: 0;
+        --color: #176b87;
+        width: 146px;
+        height: 146px;
+        margin: .5rem auto 1rem;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        background:
+            radial-gradient(closest-side, white 76%, transparent 77% 100%),
+            conic-gradient(var(--color) calc(var(--value) * 1%), #e8eeee 0);
+    }
+    .impact-number {
+        color: #183f46;
+        font-size: 2rem;
+        font-weight: 800;
+        line-height: 1;
+    }
+    .impact-unit {
+        color: #718387;
+        display: block;
+        font-size: .72rem;
+        font-weight: 700;
+        margin-top: .25rem;
+        text-transform: uppercase;
+    }
+    .metric-card h3 {
+        color: #183f46;
+        font-size: 1.1rem;
+        margin: .25rem 0;
+    }
+    .metric-card p {
+        color: #65777b;
+        font-size: .9rem;
+        margin-bottom: .5rem;
+    }
+    .coverage {
+        color: #7b8b8e;
+        font-size: .76rem;
+    }
+    .role-note {
+        border-radius: 10px;
+        padding: 1rem 1.2rem;
+        background: #f3f7f7;
+    }
+</style>
+
+<p class="results-intro">
+    These plots combine the choices made by the stakeholder roles. Scores run
+    from 0 (strong negative impact) to 100 (strong positive impact); a neutral
+    collective choice produces 50.
+</p>
+
+<div class="metric-grid">
+    {{ for metric in metrics }}
+    <article class="metric-card">
+        <div
+            class="impact-ring"
+            style="--value: {{ metric.value }}; --color: {{ metric.color }};"
+            role="img"
+            aria-label="{{ metric.name }}: {{ metric.display_value }} out of 100"
+        >
+            <div>
+                <span class="impact-number">{{ metric.display_value }}</span>
+                <span class="impact-unit">out of 100</span>
+            </div>
+        </div>
+        <h3>{{ metric.name }}</h3>
+        <p>{{ metric.short }}</p>
+        <div class="coverage">
+            {{ metric.represented_count }} of {{ metric.possible_count }}
+            contributing roles represented
+        </div>
+    </article>
+    {{ endfor }}
+</div>
+
+<div class="role-note">
+    You contributed as <strong>{{ role.name }}</strong>. The first plot includes
+    every stakeholder role; the other plots include only the roles directly
+    connected to that outcome.
+</div>
+
+{{ endblock }}

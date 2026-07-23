@@ -1,16 +1,56 @@
 {{ block title }}
-Classroom questionnaire
+Your role in the healthcare system
 {{ endblock }}
 
 {{ block content }}
 
+<style>
+    .role-card {
+        border: 1px solid #dce7e8;
+        border-left: 6px solid #176b87;
+        border-radius: 12px;
+        padding: 1.4rem;
+        margin: 1rem 0 1.5rem;
+        background: #f7fbfb;
+    }
+    .role-label {
+        color: #557074;
+        font-size: .82rem;
+        font-weight: 700;
+        letter-spacing: .08em;
+        text-transform: uppercase;
+    }
+    .role-name {
+        color: #173f46;
+        font-size: 1.65rem;
+        font-weight: 750;
+        margin: .15rem 0 .8rem;
+    }
+    .question {
+        font-size: 1.12rem;
+        line-height: 1.55;
+        margin-bottom: 0;
+    }
+    #id_impact_choice {
+        margin: 1.2rem 0 1.5rem;
+    }
+    #id_impact_choice > div {
+        margin: .55rem 0;
+    }
+</style>
+
 <p>
-    Please answer the following short questions. Your teacher will only see
-    classroom-level analytics in the admin report.
+    You represent one stakeholder in this healthcare-system simulation.
+    Consider the statement from that stakeholder's perspective.
 </p>
 
-{{ formfields }}
+<div class="role-card">
+    <div class="role-label">Assigned stakeholder</div>
+    <div class="role-name">{{ role.name }}</div>
+    <p class="question">{{ role.question }}</p>
+</div>
 
+{{ formfield 'impact_choice' }}
 {{ next_button }}
 
 {{ endblock }}

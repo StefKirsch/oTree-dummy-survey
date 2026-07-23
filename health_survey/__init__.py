@@ -1,4 +1,17 @@
+import json
+
 from otree.api import *
+
+from hcs_reporting import (
+    ANALYSIS_VERSION,
+    build_reports as build_portable_reports,
+    build_role_rows,
+    calculate_metrics_by_round,
+    make_spec,
+    normalize_spec,
+    serialize_spec,
+    specification_hash,
+)
 
 
 doc = """
@@ -419,6 +432,13 @@ def _participating_roles(test_mode):
 
 
 def creating_session(subsession):
+    if subsession.round_number == 1:
+        spec_json = serialize_spec(analysis_spec())
+        subsession.session.hcs_analysis_version = ANALYSIS_VERSION
+        subsession.session.hcs_analysis_spec_json = spec_json
+        subsession.session.hcs_analysis_spec_hash = specification_hash(
+            spec_json
+        )
     roles = _participating_roles(
         subsession.session.config.get('test_mode', False)
     )
@@ -447,241 +467,78 @@ def _ensure_labeled_room_role(player):
             round_player.stakeholder_role = label
 
 
-def _role_averages(players):
-    values_by_role = {role['key']: [] for role in ROLES}
-    for player in players:
-        choice = player.field_maybe_none('impact_choice')
-        if choice is not None and player.stakeholder_role in values_by_role:
-            values_by_role[player.stakeholder_role].append(choice)
-    return {
-        role_key: sum(values) / len(values)
-        for role_key, values in values_by_role.items()
-        if values
-    }
+def analysis_spec():
+    """Return the versioned specification embedded in portable exports."""
+    return make_spec(ROLES, ROUNDS, TEST_ROLE_KEYS)
 
 
-def _scoring_averages(players):
-    players = list(players)
-    role_averages = _role_averages(players)
-    assumed_neutral = (
-        set(ROLE_BY_KEY) - set(TEST_ROLE_KEYS)
-        if _is_test_mode(players)
-        else set()
-    )
-    averages = {role_key: 3 for role_key in assumed_neutral}
-    averages.update(role_averages)
-    return role_averages, averages, assumed_neutral
+def _session_analysis_spec(session):
+    spec_json = getattr(session, 'hcs_analysis_spec_json', None)
+    if spec_json:
+        return normalize_spec(json.loads(spec_json))
+    return analysis_spec()
 
 
-def _clamp(value):
-    return max(0, min(100, value))
-
-
-def _metric_lookup(metrics):
-    return {metric['key']: metric for metric in metrics}
+def _response_records(subsession):
+    records = []
+    for round_number in range(1, subsession.round_number + 1):
+        for player in subsession.in_round(round_number).get_players():
+            records.append(
+                dict(
+                    round=round_number,
+                    role_key=player.stakeholder_role,
+                    impact_choice=player.field_maybe_none('impact_choice'),
+                )
+            )
+    return records
 
 
 def calculate_metrics(subsession, cache=None):
-    """Return the three report metrics for one round, including carry-over."""
-    cache = {} if cache is None else cache
+    """Return live metrics through the oTree-to-portable data adapter."""
     round_number = subsession.round_number
-    if round_number in cache:
-        return cache[round_number]
-
-    players = list(subsession.get_players())
-    role_averages, scoring_averages, assumed_neutral = _scoring_averages(
-        players
-    )
-    previous = {}
-    for prior_round in range(1, round_number):
-        prior_subsession = subsession.in_round(prior_round)
-        previous[prior_round] = _metric_lookup(
-            calculate_metrics(prior_subsession, cache)
-        )
-
-    metrics = []
-    for definition in ROUNDS[round_number]['metrics']:
-        effects = {
-            role_key: effect
-            for role_key, effect in definition['effects'].items()
-            if role_key in scoring_averages
-        }
-        weight_total = sum(abs(effect) for effect in effects.values())
-        vote_numerator = sum(
-            effect * ((scoring_averages[role_key] - 3) / 2)
-            for role_key, effect in effects.items()
-        )
-        vote_effect = (
-            25 * vote_numerator / weight_total if weight_total else 0
-        )
-
-        carryover_effect = 0
-        carryover_rows = []
-        for source_round, source_key, coefficient in definition['carryovers']:
-            source = previous[source_round][source_key]
-            effect = coefficient * (source['value'] - 50)
-            carryover_effect += effect
-            carryover_rows.append(
-                dict(
-                    round_number=source_round,
-                    name=source['name'],
-                    value=source['display_value'],
-                    coefficient=coefficient,
-                    effect=round(effect, 1),
-                    calculation=(
-                        '{coefficient:g} × ({value:.1f} − 50) = '
-                        '{effect:+.1f}'
-                    ).format(
-                        coefficient=coefficient,
-                        value=source['value'],
-                        effect=effect,
-                    ),
-                )
-            )
-
-        raw_value = 50 + vote_effect + carryover_effect
-        value = round(_clamp(raw_value), 1)
-        display_value = value if effects or carryover_rows else '—'
-
-        contributing_roles = []
-        for role_key, effect in effects.items():
-            role_mean = scoring_averages[role_key]
-            contribution = (
-                25
-                * effect
-                * ((role_mean - 3) / 2)
-                / weight_total
-            )
-            contributing_roles.append(
-                dict(
-                    name=ROLE_BY_KEY[role_key]['name'],
-                    mean=round(role_mean, 2),
-                    weight=effect,
-                    contribution=round(contribution, 1),
-                    assumed_neutral=role_key in assumed_neutral,
-                )
-            )
-
-        if carryover_rows:
-            previous_explanation = (
-                'Earlier scores shift the 50-point baseline using the '
-                'carry-over terms below. A prior score of 50 has no effect.'
-            )
-        else:
-            previous_explanation = (
-                'This is the opening round, so no previous result influences '
-                'this metric.'
-            )
-
-        metrics.append(
-            dict(
-                key=definition['key'],
-                name=definition['name'],
-                short=definition['short'],
-                color=definition['color'],
-                explanation=definition['explanation'],
-                value=value,
-                display_value=display_value,
-                vote_effect=round(vote_effect, 1),
-                carryover_effect=round(carryover_effect, 1),
-                calculation=(
-                    '50 {vote:+.1f} from this round '
-                    '{carry:+.1f} carried forward = {value:.1f}'
-                ).format(
-                    vote=vote_effect,
-                    carry=carryover_effect,
-                    value=value,
-                ),
-                formula=(
-                    'Score = clamp(50 + 25 × '
-                    '[Σ(weight × (role mean − 3) ÷ 2) ÷ Σ|weight|] '
-                    '+ Σ[coefficient × (prior score − 50)], 0, 100)'
-                ),
-                previous_explanation=previous_explanation,
-                carryovers=carryover_rows,
-                contributors=contributing_roles,
-                represented_count=sum(
-                    role_key in role_averages for role_key in effects
-                ),
-                assumed_neutral_count=sum(
-                    role_key in assumed_neutral for role_key in effects
-                ),
+    cache = {} if cache is None else cache
+    if round_number not in cache:
+        cache.update(
+            calculate_metrics_by_round(
+                _response_records(subsession),
+                round_number,
+                _session_analysis_spec(subsession.session),
+                subsession.session.config.get('test_mode', False),
             )
         )
-
-    cache[round_number] = metrics
-    return metrics
+    return cache[round_number]
 
 
 def previous_reports(subsession, role_key=None):
-    cache = {}
-    return [
-        dict(
-            round_number=round_number,
-            title=ROUNDS[round_number]['title'],
-            short=ROUNDS[round_number]['short'],
-            question=(
-                ROUNDS[round_number]['questions'][role_key]
-                if role_key
-                else None
-            ),
-            metrics=calculate_metrics(
-                subsession.in_round(round_number), cache
-            ),
-        )
-        for round_number in range(1, subsession.round_number)
-    ]
+    through_round = subsession.round_number - 1
+    if through_round < 1:
+        return []
+    return build_portable_reports(
+        _response_records(subsession),
+        through_round,
+        _session_analysis_spec(subsession.session),
+        subsession.session.config.get('test_mode', False),
+        role_key,
+    )
 
 
 def reports_through_current_round(subsession, role_key):
-    reports = previous_reports(subsession, role_key)
-    round_number = subsession.round_number
-    reports.append(
-        dict(
-            round_number=round_number,
-            title=ROUNDS[round_number]['title'],
-            short=ROUNDS[round_number]['short'],
-            question=ROUNDS[round_number]['questions'][role_key],
-            metrics=calculate_metrics(subsession),
-        )
+    return build_portable_reports(
+        _response_records(subsession),
+        subsession.round_number,
+        _session_analysis_spec(subsession.session),
+        subsession.session.config.get('test_mode', False),
+        role_key,
     )
-    return reports
 
 
 def role_rows(subsession):
-    players = list(subsession.get_players())
-    role_averages, _, assumed_neutral = _scoring_averages(players)
-    round_data = ROUNDS[subsession.round_number]
-    rows = []
-    for role in ROLES:
-        average = role_averages.get(role['key'])
-        is_assumed_neutral = role['key'] in assumed_neutral
-        rows.append(
-            dict(
-                name=role['name'],
-                question=round_data['questions'][role['key']],
-                n=sum(
-                    player.stakeholder_role == role['key']
-                    and player.field_maybe_none('impact_choice') is not None
-                    for player in players
-                ),
-                mean=(
-                    3
-                    if is_assumed_neutral
-                    else round(average, 2)
-                    if average is not None
-                    else '—'
-                ),
-                basis=(
-                    'Non-participating; assumed neutral'
-                    if is_assumed_neutral
-                    else 'Participant response'
-                    if average is not None
-                    else 'No response'
-                ),
-            )
-        )
-    return rows
+    return build_role_rows(
+        _response_records(subsession),
+        subsession.round_number,
+        _session_analysis_spec(subsession.session),
+        subsession.session.config.get('test_mode', False),
+    )
 
 
 class Survey(Page):
@@ -691,8 +548,11 @@ class Survey(Page):
     @staticmethod
     def vars_for_template(player):
         _ensure_labeled_room_role(player)
-        round_data = ROUNDS[player.round_number]
-        role = ROLE_BY_KEY[player.stakeholder_role]
+        spec = _session_analysis_spec(player.session)
+        round_data = spec['rounds'][player.round_number]
+        role = {
+            item['key']: item for item in spec['roles']
+        }[player.stakeholder_role]
         return dict(
             role=role,
             round_data=round_data,
@@ -716,14 +576,22 @@ class Results(Page):
     @staticmethod
     def vars_for_template(player):
         _ensure_labeled_room_role(player)
+        spec = _session_analysis_spec(player.session)
+        role_by_key = {item['key']: item for item in spec['roles']}
         return dict(
-            role=ROLE_BY_KEY[player.stakeholder_role],
-            round_data=ROUNDS[player.round_number],
+            role=role_by_key[player.stakeholder_role],
+            round_data=spec['rounds'][player.round_number],
             reports=reports_through_current_round(
                 player.subsession, player.stakeholder_role
             ),
             test_mode=player.session.config.get('test_mode', False),
             is_last_round=player.round_number == C.NUM_ROUNDS,
+            report_filename=(
+                'healthcare-report-{}-{}.html'.format(
+                    player.session.code,
+                    player.stakeholder_role,
+                )
+            ),
         )
 
 
@@ -732,6 +600,7 @@ page_sequence = [Survey, ResultsWaitPage, Results]
 
 def vars_for_admin_report(subsession):
     players = list(subsession.get_players())
+    spec = _session_analysis_spec(subsession.session)
     completed = [
         player
         for player in players
@@ -741,7 +610,7 @@ def vars_for_admin_report(subsession):
         session_name=subsession.session.config.get(
             'display_name', subsession.session.config['name']
         ),
-        round_data=ROUNDS[subsession.round_number],
+        round_data=spec['rounds'][subsession.round_number],
         round_number=subsession.round_number,
         n_created=len(players),
         n_completed=len(completed),
@@ -753,45 +622,3 @@ def vars_for_admin_report(subsession):
         previous_reports=previous_reports(subsession),
         roles=role_rows(subsession),
     )
-
-
-def custom_export(players):
-    yield [
-        'session_code',
-        'participant_code',
-        'participant_label',
-        'round',
-        'round_topic',
-        'role_key',
-        'role_name',
-        'question',
-        'impact_choice',
-        'metric_1_name',
-        'metric_1_value',
-        'metric_2_name',
-        'metric_2_value',
-        'metric_3_name',
-        'metric_3_value',
-    ]
-
-    for player in players:
-        role = ROLE_BY_KEY[player.stakeholder_role]
-        round_data = ROUNDS[player.round_number]
-        metrics = calculate_metrics(player.subsession)
-        yield [
-            player.session.code,
-            player.participant.code,
-            player.participant.label,
-            player.round_number,
-            round_data['title'],
-            player.stakeholder_role,
-            role['name'],
-            round_data['questions'][player.stakeholder_role],
-            player.field_maybe_none('impact_choice'),
-            metrics[0]['name'],
-            metrics[0]['display_value'],
-            metrics[1]['name'],
-            metrics[1]['display_value'],
-            metrics[2]['name'],
-            metrics[2]['display_value'],
-        ]

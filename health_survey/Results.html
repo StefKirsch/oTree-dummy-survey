@@ -115,8 +115,26 @@ Report after round {{ player.round_number }}
         margin-top: 1.5rem;
         padding: .8rem 1rem;
     }
+    .download-actions {
+        align-items: center;
+        display: flex;
+        gap: .8rem;
+        margin: 1.25rem 0;
+    }
+    .download-report {
+        background: #176b87;
+        border: 0;
+        border-radius: 7px;
+        color: white;
+        cursor: pointer;
+        font-weight: 700;
+        padding: .7rem 1rem;
+    }
+    .download-report:hover { background: #10576f; }
+    .download-hint { color: #63787c; font-size: .82rem; }
 </style>
 
+<div id="downloadable-report">
 <p class="results-intro">
     This report contains every completed round. Each score is out of 100:
     50 is neutral, and higher is better for the named outcome. Votes contribute
@@ -205,6 +223,50 @@ Report after round {{ player.round_number }}
 </p>
 {{ else }}
 {{ next_button }}
+{{ endif }}
+</div>
+
+{{ if is_last_round }}
+<div class="download-actions">
+    <button
+        id="download-report"
+        class="download-report"
+        data-filename="{{ report_filename }}"
+        type="button"
+    >
+        Download this report
+    </button>
+    <span class="download-hint">Self-contained HTML; it can be opened offline.</span>
+</div>
+
+<script>
+document.getElementById('download-report').addEventListener('click', function () {
+    const report = document.getElementById('downloadable-report');
+    const styles = Array.from(document.querySelectorAll('style'))
+        .map((style) => style.textContent)
+        .join('\n');
+    const documentHtml = [
+        '<!doctype html><html lang="en"><head><meta charset="utf-8">',
+        '<meta name="viewport" content="width=device-width,initial-scale=1">',
+        '<title>Healthcare simulation final report</title><style>',
+        'body{font-family:Arial,sans-serif;color:#294e56;margin:0;}',
+        'main{max-width:1100px;margin:0 auto;padding:2rem 1.25rem;}',
+        styles,
+        '</style></head><body><main><h1>Healthcare simulation final report</h1>',
+        report.innerHTML,
+        '</main></body></html>'
+    ].join('');
+    const blob = new Blob([documentHtml], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = this.dataset.filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+});
+</script>
 {{ endif }}
 
 {{ endblock }}

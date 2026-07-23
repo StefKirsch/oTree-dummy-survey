@@ -38,7 +38,11 @@ SESSION_CONFIG_DEFAULTS = dict(
 )
 
 PARTICIPANT_FIELDS = []
-SESSION_FIELDS = []
+SESSION_FIELDS = [
+    'hcs_analysis_version',
+    'hcs_analysis_spec_json',
+    'hcs_analysis_spec_hash',
+]
 
 # ISO-639 code
 # for example: de, fr, ja, ko, zh-hans

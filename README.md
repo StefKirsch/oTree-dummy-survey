@@ -24,6 +24,31 @@ above the current-round question.
 Questions, metric weights, and carry-over coefficients are defined in
 `health_survey/__init__.py`.
 
+## Portable final reports
+
+The scoring implementation is in `hcs_reporting.py` and has no oTree
+dependency. The live application passes plain response records to this module.
+When a session is created, its complete versioned analysis specification is
+frozen on the session so that later code changes cannot alter its calculations.
+
+oTree's standard **all apps (wide)** CSV contains the raw responses, session
+mode, analysis version, specification hash, and a copy of the frozen
+specification. A round-3 participant can also use **Download this report** to
+save their cumulative report as a self-contained HTML file.
+
+To regenerate a role-neutral report later:
+
+```bash
+python hcs_reporting.py all_apps_wide-2026-07-23.csv \
+    --output final-report.html
+```
+
+Without `--session`, the most recently started complete three-round healthcare
+session is selected from the CSV. Use `--session` only to override that choice.
+Use `--role` only when a role-personalized report, including that role's
+questions, is wanted. The importer validates the embedded specification hash
+and refuses incomplete three-round exports.
+
 ## Persistent participant links
 
 The `Classroom` room uses the role names in `_rooms/classroom.txt`. Its labeled

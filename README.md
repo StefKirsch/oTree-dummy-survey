@@ -1,45 +1,53 @@
 # Healthcare-system stakeholder simulation
 
-This oTree proof of concept assigns participants one of 11 healthcare-system
-stakeholder roles. Each role receives a tailored Likert statement. After all
-participants answer, three aggregate impact plots show system alignment,
-accessible care, and innovation readiness on a 0–100 scale.
+This oTree proof of concept is a synchronized, three-round policy game for 11
+healthcare stakeholder roles:
 
-Each statement expresses that stakeholder's own incentive as an explicit
-trade-off against another stakeholder or system goal. Agreement can therefore
-raise one metric and lower another. Responses are centred on neutral and
-combined with signed effects; the participant results and admin report show the
-explanation, formula, weights, and numerical calculation for every metric.
+1. Cost and financial burden
+2. Wait times, access, and medical-staff workload
+3. Quality and coverage of care
 
-For 11 participants, each role is assigned once. In larger sessions the role
-sequence repeats. The shared `System alignment` metric includes all roles; the
-other two metrics use role subsets and explicit signed effects. Questions and
-effects are defined near the top of `health_survey/__init__.py`.
+Every role receives a different trade-off question in every round. Answers use
+a 1–5 agreement scale. Once a participant submits, a wait page prevents the
+session from continuing until every stakeholder has submitted that round.
+Everyone then sees the same report with three metrics.
 
-Two session configurations make it easy to switch modes from oTree's demo or
-session-creation page:
+Round 1 scores are based on the stakeholder votes. In rounds 2 and 3, every
+score is calculated as:
 
-- `Healthcare System Stakeholder Simulation` is the full 11-role mode.
-- `Healthcare System Stakeholder Simulation (3-role test mode)` assigns only
-  Doctors, Patients, and MedTech. The other eight roles are included in result
-  calculations as `3 – Neither agree nor disagree`.
+`50 + current-round vote effect + weighted earlier-round deviations from 50`
 
-For this project to run you need [Python 3.12](https://conda-forge.org/download/) and [uv](https://docs.astral.sh/uv/getting-started/installation/#__tabbed_1_2) installed.
+The report gives a short substantive explanation, the exact carry-over terms,
+and each role's contribution for every metric. Previous reports also appear
+above the current-round question.
+
+Questions, metric weights, and carry-over coefficients are defined in
+`health_survey/__init__.py`.
+
+## Persistent participant links
+
+The `Classroom` room uses the role names in `_rooms/classroom.txt`. Its labeled
+room URLs are reusable: reopening the same URL returns a participant to their
+current page. Each full-session room label also fixes that participant's role,
+regardless of the order in which people join. Create a session for the room
+from oTree's Rooms page and distribute one labeled URL per stakeholder.
+
+The ordinary session and demo links still work for quick testing, but a labeled
+room is the intended setup for a live exercise.
+
+## Session configurations
+
+- `Healthcare System Stakeholder Simulation`: all 11 roles.
+- `Healthcare System Stakeholder Simulation (3-role test mode)`: Doctors,
+  Patients, and MedTech. Other roles are included as neutral votes.
 
 ## Setup
 
-### 1. Install dependencies
+Python 3.12 and [uv](https://docs.astral.sh/uv/) are required.
 
 ```bash
 uv sync
-```
-
-### 2. Run the survey on a local server
-
-```bash
 uv run otree devserver
 ```
 
-### 3. Open survey in your browser
-
-Navigate to [http://localhost:8000/](http://localhost:8000/).
+Then open <http://localhost:8000/>.

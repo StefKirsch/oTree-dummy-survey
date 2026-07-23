@@ -1,10 +1,29 @@
 {{ block title }}
-Your role in the healthcare system
+Round {{ player.round_number }} of {{ C.NUM_ROUNDS }} · {{ round_data.title }}
 {{ endblock }}
 
 {{ block content }}
 
 <style>
+    .round-lead { color: #51666b; max-width: 760px; }
+    .history {
+        background: #f4f7f7;
+        border: 1px solid #dce5e6;
+        border-radius: 12px;
+        margin: 1.25rem 0;
+        padding: 1rem 1.2rem;
+    }
+    .history h3 { color: #294e56; font-size: 1rem; margin: 0 0 .7rem; }
+    .history-row { display: flex; flex-wrap: wrap; gap: .65rem; }
+    .history-score {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(22, 54, 60, .05);
+        min-width: 150px;
+        padding: .6rem .8rem;
+    }
+    .history-score strong { color: #173f46; display: block; }
+    .history-score span { color: #62777b; font-size: .8rem; }
     .role-card {
         border: 1px solid #dce7e8;
         border-left: 6px solid #176b87;
@@ -22,40 +41,38 @@ Your role in the healthcare system
     }
     .role-name {
         color: #173f46;
-        font-size: 1.65rem;
+        font-size: 1.55rem;
         font-weight: 750;
         margin: .15rem 0 .8rem;
     }
-    .question {
-        font-size: 1.12rem;
-        line-height: 1.55;
-        margin-bottom: 0;
-    }
-    .incentive {
-        color: #557074;
-        font-size: .92rem;
-        margin: 0 0 .9rem;
-    }
-    #id_impact_choice {
-        margin: 1.2rem 0 1.5rem;
-    }
-    #id_impact_choice > div {
-        margin: .55rem 0;
-    }
+    .question { font-size: 1.12rem; line-height: 1.55; margin: 0; }
+    #id_impact_choice { margin: 1.2rem 0 1.5rem; }
+    #id_impact_choice > div { margin: .55rem 0; }
 </style>
 
-<p>
-    You represent one stakeholder in this healthcare-system simulation.
-    Consider the statement from that stakeholder's perspective.
+<p class="round-lead">
+    {{ round_data.short }}. Answer from your assigned stakeholder’s
+    perspective. After submitting, everyone waits for the same shared report.
 </p>
 
+{{ for report in previous_reports }}
+<section class="history">
+    <h3>Results carried forward from round {{ report.round_number }} · {{ report.title }}</h3>
+    <div class="history-row">
+        {{ for metric in report.metrics }}
+        <div class="history-score">
+            <strong>{{ metric.display_value }} / 100</strong>
+            <span>{{ metric.name }}</span>
+        </div>
+        {{ endfor }}
+    </div>
+</section>
+{{ endfor }}
+
 <div class="role-card">
-    <div class="role-label">Assigned stakeholder</div>
+    <div class="role-label">Your assigned stakeholder</div>
     <div class="role-name">{{ role.name }}</div>
-    <p class="incentive">
-        <strong>Your stakeholder incentive:</strong> {{ role.incentive }}
-    </p>
-    <p class="question">{{ role.question }}</p>
+    <p class="question">{{ question }}</p>
 </div>
 
 {{ formfield 'impact_choice' }}

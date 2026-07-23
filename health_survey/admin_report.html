@@ -5,28 +5,16 @@
         padding: 16px;
         margin-bottom: 20px;
     }
-    .metric-row {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 16px;
-        margin: 16px 0 24px;
-    }
+    .metric-row { display: flex; flex-wrap: wrap; gap: 14px; margin: 16px 0 24px; }
     .metric {
         border: 1px solid #dce4e5;
         border-top: 5px solid var(--color);
         border-radius: 9px;
-        min-width: 170px;
+        min-width: 190px;
         padding: 12px 16px;
     }
-    .metric-number {
-        color: #183f46;
-        font-size: 28px;
-        font-weight: bold;
-    }
-    .metric-detail {
-        color: #687a7e;
-        font-size: 12px;
-    }
+    .metric-number { color: #183f46; font-size: 28px; font-weight: bold; }
+    .metric-detail { color: #687a7e; font-size: 12px; }
     .formula {
         background: #f4f7f7;
         border-radius: 6px;
@@ -37,75 +25,56 @@
         overflow-wrap: anywhere;
         padding: 8px;
     }
-    table {
-        border-collapse: collapse;
-        margin-top: 8px;
-        width: 100%;
-    }
+    table { border-collapse: collapse; margin-top: 8px; width: 100%; }
     th, td {
         border-bottom: 1px solid #e2e7e8;
         padding: 8px;
         text-align: left;
         vertical-align: top;
     }
-    th {
-        color: #53666a;
-        font-size: 12px;
-        text-transform: uppercase;
-    }
+    th { color: #53666a; font-size: 12px; text-transform: uppercase; }
 </style>
 
-<h2>HCS simulation analytics: {{ session_name }}</h2>
+<h2>{{ session_name }}</h2>
+<h3>Round {{ round_number }} · {{ round_data.title }}</h3>
 
 {{ if test_mode }}
-<p>
-    <strong>Test mode:</strong> only Doctors, Patients, and MedTech
-    participate. All other stakeholder roles are scored as 3 (neither agree
-    nor disagree).
-</p>
+<p><strong>Test mode:</strong> Doctors, Patients, and MedTech participate;
+all other roles are scored as neutral.</p>
 {{ endif }}
 
 <div class="metric-row">
     <div class="metric" style="--color: #789094;">
         <div>Participants</div>
         <div class="metric-number">{{ n_completed }} / {{ n_created }}</div>
-        <div class="metric-detail">{{ completion_pct }}% responded</div>
+        <div class="metric-detail">{{ completion_pct }}% submitted this round</div>
     </div>
     {{ for metric in metrics }}
     <div class="metric" style="--color: {{ metric.color }};">
         <div>{{ metric.name }}</div>
         <div class="metric-number">{{ metric.display_value }}</div>
-        <div class="metric-detail">
-            {{ metric.represented_count }} roles responded
-            {{ if metric.assumed_neutral_count }}
-            + {{ metric.assumed_neutral_count }} assumed neutral
-            {{ endif }}
-        </div>
+        <div class="metric-detail">{{ metric.calculation }}</div>
     </div>
     {{ endfor }}
 </div>
 
 <div class="analytics-card">
-    <h3>Metric formulas</h3>
+    <h3>Metric calculations and carry-over</h3>
     {{ for metric in metrics }}
     <section>
         <h4>{{ metric.name }}</h4>
         <p>{{ metric.explanation }}</p>
         <span class="formula">{{ metric.formula }}</span>
-        <p class="metric-detail">
-            Weighted incentive effect: {{ metric.effect_terms }}
-        </p>
+        <p class="metric-detail">{{ metric.previous_explanation }}</p>
+        {{ for item in metric.carryovers }}
+        <span class="formula">
+            Round {{ item.round_number }} {{ item.name }}:
+            {{ item.calculation }}
+        </span>
+        {{ endfor }}
         <span class="formula">This result: {{ metric.calculation }}</span>
-        <p class="metric-detail">{{ metric.contributors }}</p>
     </section>
     {{ endfor }}
-    <p>
-        Participant responses are first averaged within each role. Subtracting
-        3 from a role mean centres its 1–5 response on zero. Positive effects
-        (eᵣ) mean agreement raises the metric; negative effects mean agreement
-        lowers it. Dividing by the sum of absolute included effects normalises
-        the result, which is then capped to the 0–100 range.
-    </p>
 </div>
 
 <div class="analytics-card">
@@ -113,8 +82,7 @@
     <table>
         <tr>
             <th>Role</th>
-            <th>Stakeholder incentive</th>
-            <th>Custom statement</th>
+            <th>Round question</th>
             <th>N</th>
             <th>Mean (1–5)</th>
             <th>Basis</th>
@@ -122,7 +90,6 @@
         {{ for role in roles }}
         <tr>
             <td><strong>{{ role.name }}</strong></td>
-            <td>{{ role.incentive }}</td>
             <td>{{ role.question }}</td>
             <td>{{ role.n }}</td>
             <td>{{ role.mean }}</td>

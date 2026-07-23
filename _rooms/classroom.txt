@@ -1,0 +1,11 @@
+we_for_you
+health_alliance
+gps
+hmc
+nurses
+doctors
+elderly_care
+medtech
+bigtech
+new_tech
+patients

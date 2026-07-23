@@ -1,87 +1,94 @@
 {{ block title }}
-Healthcare-system impact
+Report after round {{ player.round_number }}
 {{ endblock }}
 
 {{ block content }}
 
 <style>
-    .results-intro {
-        max-width: 760px;
-        color: #455b60;
+    .results-intro { color: #455b60; max-width: 800px; }
+    .round-report {
+        border: 1px solid #dce4e5;
+        border-radius: 12px;
+        margin: 1.5rem 0;
+        overflow: hidden;
+    }
+    .round-report > header {
+        background: #eef4f4;
+        padding: 1rem 1.2rem;
+    }
+    .round-report > header h2 {
+        color: #294e56;
+        font-size: 1.2rem;
+        margin: 0 0 .25rem;
+    }
+    .round-report > header p {
+        color: #5d7377;
+        font-size: .85rem;
+        margin: 0;
+    }
+    .round-question {
+        border-left: 4px solid #8aa7ac;
+        color: #526a6f;
+        font-size: .85rem;
+        margin: 1rem 1.2rem 0;
+        padding: .55rem .8rem;
     }
     .metric-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-        gap: 1.25rem;
-        margin: 1.75rem 0;
+        grid-template-columns: repeat(auto-fit, minmax(235px, 1fr));
+        gap: 1.1rem;
+        margin: 1.2rem;
     }
     .metric-card {
         border: 1px solid #dce4e5;
-        border-radius: 14px;
-        padding: 1.35rem;
+        border-top: 5px solid var(--color);
+        border-radius: 12px;
+        padding: 1.2rem;
         background: #fff;
         box-shadow: 0 5px 18px rgba(22, 54, 60, .06);
     }
-    .impact-ring {
-        --value: 0;
-        --color: #176b87;
-        width: 146px;
-        height: 146px;
-        margin: .5rem auto 1rem;
-        border-radius: 50%;
-        display: grid;
-        place-items: center;
-        background:
-            radial-gradient(closest-side, white 76%, transparent 77% 100%),
-            conic-gradient(var(--color) calc(var(--value) * 1%), #e8eeee 0);
-    }
-    .impact-number {
+    .metric-number {
         color: #183f46;
         font-size: 2rem;
         font-weight: 800;
-        line-height: 1;
-    }
-    .impact-unit {
-        color: #718387;
-        display: block;
-        font-size: .72rem;
-        font-weight: 700;
-        margin-top: .25rem;
-        text-transform: uppercase;
     }
     .metric-card h3 {
         color: #183f46;
         font-size: 1.1rem;
-        margin: .25rem 0;
-        text-align: center;
+        margin: .2rem 0;
     }
     .metric-summary {
         color: #65777b;
-        font-size: .9rem;
-        margin-bottom: .5rem;
-        text-align: center;
+        font-size: .88rem;
+        min-height: 2.6em;
     }
-    .coverage {
-        color: #7b8b8e;
-        font-size: .76rem;
-        text-align: center;
+    .score-bar {
+        background: #e8eeee;
+        border-radius: 999px;
+        height: 10px;
+        margin: .8rem 0;
+        overflow: hidden;
     }
-    .metric-calculation {
+    .score-fill {
+        background: var(--color);
+        height: 100%;
+        width: var(--value);
+    }
+    details {
         border-top: 1px solid #e3e9ea;
         margin-top: 1rem;
-        padding-top: .85rem;
+        padding-top: .8rem;
     }
-    .metric-calculation summary {
+    summary {
         color: #315b63;
         cursor: pointer;
         font-size: .84rem;
         font-weight: 700;
     }
-    .metric-calculation p {
+    details p, details li {
         color: #5c6f73;
-        font-size: .8rem;
+        font-size: .79rem;
         line-height: 1.45;
-        margin: .65rem 0;
     }
     .formula {
         background: #f4f7f7;
@@ -89,82 +96,115 @@ Healthcare-system impact
         color: #294b52;
         display: block;
         font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-        font-size: .73rem;
+        font-size: .72rem;
         line-height: 1.5;
         overflow-wrap: anywhere;
         padding: .65rem;
     }
-    .effect-list {
-        color: #6e7f82;
-        font-size: .74rem;
-        line-height: 1.45;
-        margin-top: .65rem;
-    }
-    .role-note {
+    .compact-list { padding-left: 1.1rem; }
+    .history-note {
+        background: #f4f7f7;
         border-radius: 10px;
-        padding: 1rem 1.2rem;
-        background: #f3f7f7;
+        color: #526b70;
+        font-size: .9rem;
+        padding: .9rem 1.1rem;
+    }
+    .finish-note {
+        border-left: 5px solid #176b87;
+        color: #31545b;
+        margin-top: 1.5rem;
+        padding: .8rem 1rem;
     }
 </style>
 
 <p class="results-intro">
-    These plots combine the opposing incentives expressed by the stakeholder
-    roles. Scores run from 0 (low alignment, access, or readiness) to 100
-    (high); neutral responses produce 50. Agreement can raise one metric and
-    lower another, depending on the incentive’s expected system effect.
+    This report contains every completed round. Each score is out of 100:
+    50 is neutral, and higher is better for the named outcome. Votes contribute
+    up to 25 points in either direction. From round 2 onward, earlier results
+    also shift the baseline, so decisions accumulate.
     {{ if test_mode }}
-    This test session includes Doctors, Patients, and MedTech; every other
-    role is included in the calculation with a neutral score.
+    In this three-role test, non-participating roles are treated as neutral.
     {{ endif }}
 </p>
 
-<div class="metric-grid">
-    {{ for metric in metrics }}
-    <article class="metric-card">
-        <div
-            class="impact-ring"
-            style="--value: {{ metric.value }}; --color: {{ metric.color }};"
-            role="img"
-            aria-label="{{ metric.name }}: {{ metric.display_value }} out of 100"
-        >
-            <div>
-                <span class="impact-number">{{ metric.display_value }}</span>
-                <span class="impact-unit">out of 100</span>
-            </div>
-        </div>
-        <h3>{{ metric.name }}</h3>
-        <p class="metric-summary">{{ metric.short }}</p>
-        <div class="coverage">
-            {{ metric.represented_count }} contributing roles responded
-            {{ if metric.assumed_neutral_count }}
-            · {{ metric.assumed_neutral_count }} non-participating roles
-            assumed neutral
-            {{ endif }}
-        </div>
-        <details class="metric-calculation">
-            <summary>How this metric was calculated</summary>
-            <p>{{ metric.explanation }}</p>
-            <span class="formula">{{ metric.formula }}</span>
-            <p>
-                <strong>Weighted incentive effect:</strong><br>
-                {{ metric.effect_terms }}
-            </p>
-            <p>
-                Each role mean is on the 1–5 scale; eᵣ is its signed effect
-                shown below. Subtracting 3 makes a neutral mean contribute
-                zero.
-            </p>
-            <span class="formula">This result: {{ metric.calculation }}</span>
-            <div class="effect-list">{{ metric.contributors }}</div>
-        </details>
-    </article>
-    {{ endfor }}
-</div>
+{{ for report in reports }}
+<section class="round-report">
+    <header>
+        <h2>Round {{ report.round_number }} · {{ report.title }}</h2>
+        <p>{{ report.short }}</p>
+    </header>
 
-<div class="role-note">
-    You contributed as <strong>{{ role.name }}</strong>. System alignment
-    includes every stakeholder role; the other metrics include only incentives
-    directly connected to that outcome.
-</div>
+    <p class="round-question">
+        <strong>Your {{ role.name }} question was:</strong>
+        {{ report.question }}
+    </p>
+
+    <div class="metric-grid">
+        {{ for metric in report.metrics }}
+        <article
+            class="metric-card"
+            style="--color: {{ metric.color }}; --value: {{ metric.value }}%;"
+        >
+            <div class="metric-number">{{ metric.display_value }}</div>
+            <h3>{{ metric.name }}</h3>
+            <p class="metric-summary">{{ metric.short }}</p>
+            <div
+                class="score-bar"
+                aria-label="{{ metric.name }}: {{ metric.display_value }} out of 100"
+            >
+                <div class="score-fill"></div>
+            </div>
+            <details>
+                <summary>How this metric was calculated</summary>
+                <p>{{ metric.explanation }}</p>
+                <span class="formula">{{ metric.formula }}</span>
+                <p><strong>This result:</strong> {{ metric.calculation }}</p>
+                <p>
+                    <strong>Influence of previous rounds:</strong>
+                    {{ metric.previous_explanation }}
+                </p>
+                {{ if metric.carryovers }}
+                <ul class="compact-list">
+                    {{ for item in metric.carryovers }}
+                    <li>
+                        Round {{ item.round_number }} {{ item.name }}:
+                        {{ item.calculation }}
+                    </li>
+                    {{ endfor }}
+                </ul>
+                {{ endif }}
+                <p><strong>Influence of this round’s role votes:</strong></p>
+                <ul class="compact-list">
+                    {{ for item in metric.contributors }}
+                    <li>
+                        {{ item.name }} mean {{ item.mean }},
+                        weight {{ item.weight }},
+                        contribution {{ item.contribution }}
+                        {{ if item.assumed_neutral }}
+                        (assumed neutral)
+                        {{ endif }}
+                    </li>
+                    {{ endfor }}
+                </ul>
+            </details>
+        </article>
+        {{ endfor }}
+    </div>
+</section>
+{{ endfor }}
+
+<p class="history-note">
+    You voted as <strong>{{ role.name }}</strong>. Every participant sees the
+    same cumulative round results.
+</p>
+
+{{ if is_last_round }}
+<p class="finish-note">
+    The simulation is complete. You may reopen your participant link to return
+    to this final page.
+</p>
+{{ else }}
+{{ next_button }}
+{{ endif }}
 
 {{ endblock }}

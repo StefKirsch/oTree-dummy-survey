@@ -20,6 +20,8 @@ ROOMS = [
     dict(
         name='classroom',
         display_name='Classroom',
+        participant_label_file='_rooms/classroom.txt',
+        use_secure_urls=True,
     ),
 ]
 

@@ -7,6 +7,13 @@ SESSION_CONFIGS = [
         app_sequence=['health_survey'],
         num_demo_participants=11,
     ),
+    dict(
+        name='health_survey_test',
+        display_name='Healthcare System Stakeholder Simulation (3-role test mode)',
+        app_sequence=['health_survey'],
+        num_demo_participants=3,
+        test_mode=True,
+    ),
 ]
 
 ROOMS = [
@@ -22,7 +29,10 @@ ROOMS = [
 # e.g. self.session.config['participation_fee']
 
 SESSION_CONFIG_DEFAULTS = dict(
-    real_world_currency_per_point=1.00, participation_fee=0.00, doc=""
+    real_world_currency_per_point=1.00,
+    participation_fee=0.00,
+    test_mode=False,
+    doc="",
 )
 
 PARTICIPANT_FIELDS = []

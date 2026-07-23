@@ -117,6 +117,11 @@ ROLES = [
 
 ROLE_BY_KEY = {role['key']: role for role in ROLES}
 
+# Test sessions use only these roles. All other stakeholder roles remain part
+# of the metrics, with a neutral score, so test results stay comparable with
+# full-session results.
+TEST_ROLE_KEYS = ('doctors', 'patients', 'medtech')
+
 
 # A score of 1 maps to 0 impact points, 3 to 50, and 5 to 100. We first
 # average multiple participants with the same role, so every represented role
@@ -190,9 +195,25 @@ class Player(BasePlayer):
     )
 
 
+def _is_test_mode(players):
+    players = list(players)
+    return bool(players and players[0].session.config.get('test_mode', False))
+
+
+def _participating_roles(test_mode):
+    if test_mode:
+        return [ROLE_BY_KEY[role_key] for role_key in TEST_ROLE_KEYS]
+    return ROLES
+
+
 def creating_session(subsession):
+    participating_roles = _participating_roles(
+        subsession.session.config.get('test_mode', False)
+    )
     for player in subsession.get_players():
-        role = ROLES[(player.id_in_subsession - 1) % len(ROLES)]
+        role = participating_roles[
+            (player.id_in_subsession - 1) % len(participating_roles)
+        ]
         player.stakeholder_role = role['key']
         player.participant.vars['hcs_role'] = role['key']
 
@@ -212,21 +233,30 @@ def _role_averages(players):
 
 
 def calculate_metrics(players):
+    players = list(players)
+    test_mode = _is_test_mode(players)
     role_averages = _role_averages(players)
+    non_participating_role_keys = (
+        set(ROLE_BY_KEY) - set(TEST_ROLE_KEYS) if test_mode else set()
+    )
+    scoring_averages = {
+        role_key: 3 for role_key in non_participating_role_keys
+    }
+    scoring_averages.update(role_averages)
     metrics = []
 
     for definition in METRIC_DEFINITIONS:
-        represented = {
+        scored = {
             role_key: weight
             for role_key, weight in definition['weights'].items()
-            if role_key in role_averages
+            if role_key in scoring_averages
         }
-        total_weight = sum(represented.values())
+        total_weight = sum(scored.values())
 
         if total_weight:
             weighted_likert = sum(
-                role_averages[role_key] * weight
-                for role_key, weight in represented.items()
+                scoring_averages[role_key] * weight
+                for role_key, weight in scored.items()
             ) / total_weight
             value = round((weighted_likert - 1) * 25, 1)
             display_value = value
@@ -247,7 +277,14 @@ def calculate_metrics(players):
                     '{} ×{:g}'.format(ROLE_BY_KEY[role_key]['name'], weight)
                     for role_key, weight in definition['weights'].items()
                 ),
-                represented_count=len(represented),
+                represented_count=sum(
+                    role_key in role_averages
+                    for role_key in definition['weights']
+                ),
+                assumed_neutral_count=sum(
+                    role_key in non_participating_role_keys
+                    for role_key in definition['weights']
+                ),
                 possible_count=len(definition['weights']),
             )
         )
@@ -256,6 +293,11 @@ def calculate_metrics(players):
 
 
 def role_rows(players):
+    players = list(players)
+    test_mode = _is_test_mode(players)
+    non_participating_role_keys = (
+        set(ROLE_BY_KEY) - set(TEST_ROLE_KEYS) if test_mode else set()
+    )
     averages = _role_averages(players)
     rows = []
     for role in ROLES:
@@ -266,12 +308,26 @@ def role_rows(players):
             and player.field_maybe_none('impact_choice') is not None
         ]
         average = averages.get(role['key'])
+        assumed_neutral = role['key'] in non_participating_role_keys
         rows.append(
             dict(
                 name=role['name'],
                 question=role['question'],
                 n=len(role_players),
-                mean=round(average, 2) if average is not None else '—',
+                mean=(
+                    3
+                    if assumed_neutral
+                    else round(average, 2)
+                    if average is not None
+                    else '—'
+                ),
+                basis=(
+                    'Non-participating; assumed neutral'
+                    if assumed_neutral
+                    else 'Participant response'
+                    if average is not None
+                    else 'No response'
+                ),
             )
         )
     return rows
@@ -297,6 +353,7 @@ class Results(Page):
         return dict(
             role=ROLE_BY_KEY[player.stakeholder_role],
             metrics=calculate_metrics(player.subsession.get_players()),
+            test_mode=player.session.config.get('test_mode', False),
         )
 
 
@@ -322,6 +379,7 @@ def vars_for_admin_report(subsession):
             if players
             else 0
         ),
+        test_mode=subsession.session.config.get('test_mode', False),
         metrics=calculate_metrics(players),
         roles=role_rows(players),
     )

@@ -47,6 +47,14 @@
 
 <h2>HCS simulation analytics: {{ session_name }}</h2>
 
+{{ if test_mode }}
+<p>
+    <strong>Test mode:</strong> only Doctors, Patients, and MedTech
+    participate. All other stakeholder roles are scored as 3 (neither agree
+    nor disagree).
+</p>
+{{ endif }}
+
 <div class="metric-row">
     <div class="metric" style="--color: #789094;">
         <div>Participants</div>
@@ -58,7 +66,10 @@
         <div>{{ metric.name }}</div>
         <div class="metric-number">{{ metric.display_value }}</div>
         <div class="metric-detail">
-            {{ metric.represented_count }}/{{ metric.possible_count }} roles represented
+            {{ metric.represented_count }} roles responded
+            {{ if metric.assumed_neutral_count }}
+            + {{ metric.assumed_neutral_count }} assumed neutral
+            {{ endif }}
         </div>
     </div>
     {{ endfor }}
@@ -88,6 +99,7 @@
             <th>Custom statement</th>
             <th>N</th>
             <th>Mean (1–5)</th>
+            <th>Basis</th>
         </tr>
         {{ for role in roles }}
         <tr>
@@ -95,6 +107,7 @@
             <td>{{ role.question }}</td>
             <td>{{ role.n }}</td>
             <td>{{ role.mean }}</td>
+            <td>{{ role.basis }}</td>
         </tr>
         {{ endfor }}
     </table>

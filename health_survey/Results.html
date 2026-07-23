@@ -75,6 +75,10 @@ Healthcare-system impact
     These plots combine the choices made by the stakeholder roles. Scores run
     from 0 (strong negative impact) to 100 (strong positive impact); a neutral
     collective choice produces 50.
+    {{ if test_mode }}
+    This test session includes Doctors, Patients, and MedTech; every other
+    role is included in the calculation with a neutral score.
+    {{ endif }}
 </p>
 
 <div class="metric-grid">
@@ -94,8 +98,11 @@ Healthcare-system impact
         <h3>{{ metric.name }}</h3>
         <p>{{ metric.short }}</p>
         <div class="coverage">
-            {{ metric.represented_count }} of {{ metric.possible_count }}
-            contributing roles represented
+            {{ metric.represented_count }} contributing roles responded
+            {{ if metric.assumed_neutral_count }}
+            · {{ metric.assumed_neutral_count }} non-participating roles
+            assumed neutral
+            {{ endif }}
         </div>
     </article>
     {{ endfor }}

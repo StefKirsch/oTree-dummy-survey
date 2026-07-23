@@ -1,4 +1,10 @@
-{% if forloop.counter == 1 %}We-for-You
+{% if session.config.test_mode %}
+{% if forloop.counter == 1 %}Doctors
+{% elif forloop.counter == 2 %}Patients
+{% elif forloop.counter == 3 %}MedTech
+{% else %}P{{ forloop.counter }}
+{% endif %}
+{% elif forloop.counter == 1 %}We-for-You
 {% elif forloop.counter == 2 %}Health Alliance
 {% elif forloop.counter == 3 %}GPs
 {% elif forloop.counter == 4 %}HMC

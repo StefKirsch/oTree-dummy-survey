@@ -10,6 +10,14 @@ sequence repeats. The shared `System alignment` metric includes all roles; the
 other two metrics use role subsets and explicit weights. Questions and weights
 are defined near the top of `health_survey/__init__.py`.
 
+Two session configurations make it easy to switch modes from oTree's demo or
+session-creation page:
+
+- `Healthcare System Stakeholder Simulation` is the full 11-role mode.
+- `Healthcare System Stakeholder Simulation (3-role test mode)` assigns only
+  Doctors, Patients, and MedTech. The other eight roles are included in result
+  calculations as `3 – Neither agree nor disagree`.
+
 For this project to run you need [Python 3.12](https://conda-forge.org/download/) and [uv](https://docs.astral.sh/uv/getting-started/installation/#__tabbed_1_2) installed.
 
 ## Setup

@@ -5,10 +5,16 @@ stakeholder roles. Each role receives a tailored Likert statement. After all
 participants answer, three aggregate impact plots show system alignment,
 accessible care, and innovation readiness on a 0–100 scale.
 
+Each statement expresses that stakeholder's own incentive as an explicit
+trade-off against another stakeholder or system goal. Agreement can therefore
+raise one metric and lower another. Responses are centred on neutral and
+combined with signed effects; the participant results and admin report show the
+explanation, formula, weights, and numerical calculation for every metric.
+
 For 11 participants, each role is assigned once. In larger sessions the role
 sequence repeats. The shared `System alignment` metric includes all roles; the
-other two metrics use role subsets and explicit weights. Questions and weights
-are defined near the top of `health_survey/__init__.py`.
+other two metrics use role subsets and explicit signed effects. Questions and
+effects are defined near the top of `health_survey/__init__.py`.
 
 Two session configurations make it easy to switch modes from oTree's demo or
 session-creation page:

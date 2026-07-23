@@ -31,6 +31,11 @@ Your role in the healthcare system
         line-height: 1.55;
         margin-bottom: 0;
     }
+    .incentive {
+        color: #557074;
+        font-size: .92rem;
+        margin: 0 0 .9rem;
+    }
     #id_impact_choice {
         margin: 1.2rem 0 1.5rem;
     }
@@ -47,6 +52,9 @@ Your role in the healthcare system
 <div class="role-card">
     <div class="role-label">Assigned stakeholder</div>
     <div class="role-name">{{ role.name }}</div>
+    <p class="incentive">
+        <strong>Your stakeholder incentive:</strong> {{ role.incentive }}
+    </p>
     <p class="question">{{ role.question }}</p>
 </div>
 

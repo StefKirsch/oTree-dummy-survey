@@ -3,7 +3,7 @@ from otree.api import *
 
 doc = """
 Proof-of-concept healthcare-system simulation. Participants are assigned a
-stakeholder role, answer a role-specific Likert question, and see three
+stakeholder role, answer a role-specific incentive trade-off, and see three
 aggregate system-impact metrics.
 """
 
@@ -28,89 +28,112 @@ ROLES = [
     dict(
         key='we_for_you',
         name='We-for-You',
+        incentive='Pool authority and resources around coalition priorities.',
         question=(
-            'Our coalition should prioritise initiatives that connect '
-            'organisations around shared healthcare-system goals.'
+            'Regional organisations should pool part of their budgets and '
+            'decision authority under our coalition’s shared priorities, even '
+            'when individual organisations would spend those resources '
+            'differently.'
         ),
     ),
     dict(
         key='health_alliance',
         name='Health Alliance',
+        incentive='Move resources upstream to prevention and population health.',
         question=(
-            'Regional health alliances should redirect more resources towards '
-            'prevention and population health.'
+            'Provider budgets should be shifted from treatment to prevention '
+            'and population-health programmes led by the regional alliance, '
+            'even if this reduces short-term clinical capacity.'
         ),
     ),
     dict(
         key='gps',
         name='GPs',
+        incentive='Increase primary-care funding and gatekeeping authority.',
         question=(
-            'Primary care should receive more capacity to coordinate patients '
-            'across the healthcare system.'
+            'More funding and gatekeeping authority should move from hospitals '
+            'to general practice, even if hospitals must reduce some services.'
         ),
     ),
     dict(
         key='hmc',
         name='HMC',
+        incentive='Protect hospital funding and specialist capacity.',
         question=(
-            'Hospitals should shift more resources from isolated specialist '
-            'production towards integrated care pathways.'
+            'Hospital funding and specialist capacity should be protected, '
+            'even if this slows the shift of resources to primary, preventive, '
+            'and home care.'
         ),
     ),
     dict(
         key='nurses',
         name='Nurses',
+        incentive='Expand nursing scope, autonomy, and coordination authority.',
         question=(
-            'Nurses should have greater autonomy in care coordination and '
-            'service improvement.'
+            'Clinical tasks and coordination authority should shift from '
+            'doctors to nurses, even when this reduces doctors’ control over '
+            'care decisions.'
         ),
     ),
     dict(
         key='doctors',
         name='Doctors',
+        incentive='Preserve professional discretion over clinical decisions.',
         question=(
-            'Doctors should standardise care pathways across organisations, '
-            'even when this limits some local discretion.'
+            'Doctors should retain discretion over treatment and referral '
+            'decisions, even when this produces variation from regional '
+            'pathways and targets.'
         ),
     ),
     dict(
         key='elderly_care',
         name='Elderly care',
+        incentive='Ring-fence resources for long-term and home care.',
         question=(
-            'Elderly-care organisations should invest more in care at home '
-            'and cross-sector coordination.'
+            'Funding should be ring-fenced for long-term and home care, even if '
+            'acute-care organisations receive a smaller share of the regional '
+            'budget.'
         ),
     ),
     dict(
         key='medtech',
         name='MedTech',
+        incentive='Accelerate procurement while protecting product value and IP.',
         question=(
-            'MedTech companies should prioritise interoperable solutions with '
-            'demonstrable patient value.'
+            'Purchasers should adopt and reimburse medical technologies '
+            'quickly, even when higher prices or proprietary systems limit '
+            'funds and interoperability.'
         ),
     ),
     dict(
         key='bigtech',
         name='BigTech',
+        incentive='Gain data access and platform scale across organisations.',
         question=(
-            'BigTech companies should share data infrastructure with health '
-            'partners under public governance.'
+            'Health organisations should allow large technology platforms '
+            'broad access to data and infrastructure so services can scale '
+            'quickly, even if this increases dependence on a commercial '
+            'platform.'
         ),
     ),
     dict(
         key='new_tech',
         name='New Tech',
+        incentive='Lower barriers to pilots, reimbursement, and market entry.',
         question=(
-            'Emerging health technologies should be adopted faster through '
-            'supervised real-world experiments.'
+            'New health technologies should receive fast-track pilots and '
+            'reimbursement before long-term evidence is complete, even if '
+            'established providers bear implementation risk.'
         ),
     ),
     dict(
         key='patients',
         name='Patients',
+        incentive='Protect provider choice and rapid access to requested care.',
         question=(
-            'Patients should have greater influence over healthcare priorities '
-            'and resource allocation.'
+            'Patients should retain broad provider choice and rapid access to '
+            'requested care, even if regional planners cannot concentrate '
+            'services or standardise pathways.'
         ),
     ),
 ]
@@ -123,57 +146,80 @@ ROLE_BY_KEY = {role['key']: role for role in ROLES}
 TEST_ROLE_KEYS = ('doctors', 'patients', 'medtech')
 
 
-# A score of 1 maps to 0 impact points, 3 to 50, and 5 to 100. We first
-# average multiple participants with the same role, so every represented role
-# has the intended influence regardless of participant count.
+# Responses are centred around neutral: role mean - 3. A positive effect means
+# agreement with that role's incentive raises the metric; a negative effect
+# means agreement lowers it. Dividing by the sum of absolute effects keeps the
+# result on a 0–100 scale. Responses are averaged within roles first so a role's
+# influence does not depend on the number of participants assigned to it.
 METRIC_DEFINITIONS = [
     dict(
         key='system_alignment',
         name='System alignment',
-        short='Shared direction across the HCS',
+        short='Shared direction rather than stakeholder control',
         color='#176B87',
-        weights={role['key']: 1.0 for role in ROLES},
-        formula='Equal-weight mean of all represented stakeholder roles.',
+        explanation=(
+            'Rewards incentives that pool authority around regional goals and '
+            'penalises incentives that preserve a stakeholder’s own budget, '
+            'autonomy, choice, platform, or market position.'
+        ),
+        effects={
+            'we_for_you': 1.5,
+            'health_alliance': 1.0,
+            'gps': -0.7,
+            'hmc': -1.2,
+            'nurses': -0.5,
+            'doctors': -1.4,
+            'elderly_care': -0.7,
+            'medtech': -0.8,
+            'bigtech': -1.1,
+            'new_tech': -0.8,
+            'patients': -1.0,
+        },
     ),
     dict(
         key='accessible_care',
         name='Accessible care',
-        short='Capacity, coordination and equitable access',
+        short='Care close to patients with equitable capacity',
         color='#C45A3B',
-        weights={
-            'we_for_you': 1.0,
-            'health_alliance': 1.2,
-            'gps': 1.4,
-            'hmc': 1.1,
-            'nurses': 1.4,
-            'doctors': 1.1,
-            'elderly_care': 1.3,
+        explanation=(
+            'Rewards prevention, primary care, task sharing, home care, and '
+            'patient access. It penalises incentives that protect scarce acute '
+            'capacity or divert access resources to professional autonomy, '
+            'technology prices, or risky adoption.'
+        ),
+        effects={
+            'we_for_you': 0.8,
+            'health_alliance': 1.4,
+            'gps': 1.5,
+            'hmc': -1.3,
+            'nurses': 1.5,
+            'doctors': -0.8,
+            'elderly_care': 1.4,
+            'medtech': -0.6,
+            'new_tech': -0.7,
             'patients': 1.3,
         },
-        formula=(
-            'Weighted mean of care-delivery roles; GPs and nurses carry the '
-            'largest weights.'
-        ),
     ),
     dict(
         key='innovation_readiness',
         name='Innovation readiness',
-        short='Responsible adoption and interoperability',
+        short='Ability to adopt and scale new ways of working',
         color='#6B5CA5',
-        weights={
-            'health_alliance': 0.7,
-            'hmc': 1.0,
-            'nurses': 0.6,
-            'doctors': 0.8,
-            'medtech': 1.4,
-            'bigtech': 1.2,
-            'new_tech': 1.5,
-            'patients': 0.8,
-        },
-        formula=(
-            'Weighted mean of innovation roles; New Tech and MedTech carry '
-            'the largest weights.'
+        explanation=(
+            'Rewards incentives that enable task redesign, technology '
+            'procurement, data-platform scale, and experimentation. It '
+            'penalises incentives that preserve established clinical control '
+            'or prioritise immediate access over implementation capacity.'
         ),
+        effects={
+            'we_for_you': 0.7,
+            'nurses': 0.8,
+            'doctors': -1.2,
+            'medtech': 1.5,
+            'bigtech': 1.4,
+            'new_tech': 1.6,
+            'patients': -0.8,
+        },
     ),
 ]
 
@@ -232,6 +278,44 @@ def _role_averages(players):
     }
 
 
+def _effect_terms(effects):
+    terms = []
+    for role_key, effect in effects.items():
+        if effect < 0:
+            operator = '−'
+        elif terms:
+            operator = '+'
+        else:
+            operator = ''
+        terms.append(
+            '{} {:g} × ({} mean − 3)'.format(
+                operator,
+                abs(effect),
+                ROLE_BY_KEY[role_key]['name'],
+            ).strip()
+        )
+    return ' '.join(terms)
+
+
+def _effect_summary(effects):
+    supports = [
+        '{} ×{:g}'.format(ROLE_BY_KEY[role_key]['name'], effect)
+        for role_key, effect in effects.items()
+        if effect > 0
+    ]
+    opposes = [
+        '{} ×{:g}'.format(ROLE_BY_KEY[role_key]['name'], abs(effect))
+        for role_key, effect in effects.items()
+        if effect < 0
+    ]
+    parts = []
+    if supports:
+        parts.append('Agreement raises the score: ' + ', '.join(supports))
+    if opposes:
+        parts.append('Agreement lowers the score: ' + ', '.join(opposes))
+    return ' · '.join(parts)
+
+
 def calculate_metrics(players):
     players = list(players)
     test_mode = _is_test_mode(players)
@@ -247,22 +331,31 @@ def calculate_metrics(players):
 
     for definition in METRIC_DEFINITIONS:
         scored = {
-            role_key: weight
-            for role_key, weight in definition['weights'].items()
+            role_key: effect
+            for role_key, effect in definition['effects'].items()
             if role_key in scoring_averages
         }
-        total_weight = sum(scored.values())
+        total_effect = sum(abs(effect) for effect in scored.values())
 
-        if total_weight:
-            weighted_likert = sum(
-                scoring_averages[role_key] * weight
-                for role_key, weight in scored.items()
-            ) / total_weight
-            value = round((weighted_likert - 1) * 25, 1)
+        if total_effect:
+            weighted_deviation = sum(
+                (scoring_averages[role_key] - 3) * effect
+                for role_key, effect in scored.items()
+            )
+            unbounded_value = 50 + 25 * weighted_deviation / total_effect
+            value = round(max(0, min(100, unbounded_value)), 1)
             display_value = value
+            calculation = (
+                '50 + 25 × ({deviation:.2f} ÷ {total:g}) = {value:.1f}'
+            ).format(
+                deviation=weighted_deviation,
+                total=total_effect,
+                value=value,
+            )
         else:
             value = 0
             display_value = '—'
+            calculation = 'No contributing role has a response yet.'
 
         metrics.append(
             dict(
@@ -272,20 +365,29 @@ def calculate_metrics(players):
                 color=definition['color'],
                 value=value,
                 display_value=display_value,
-                formula=definition['formula'],
-                contributors=', '.join(
-                    '{} ×{:g}'.format(ROLE_BY_KEY[role_key]['name'], weight)
-                    for role_key, weight in definition['weights'].items()
+                explanation=definition['explanation'],
+                formula=(
+                    'Score = clamp(50 + 25 × [Σ(eᵣ × (role mean − 3)) '
+                    '÷ Σ|eᵣ|], 0, 100)'
                 ),
+                effect_terms=(
+                    _effect_terms(scored)
+                    or 'No role effects are included yet.'
+                ),
+                contributors=(
+                    _effect_summary(scored)
+                    or 'No role effects are included yet.'
+                ),
+                calculation=calculation,
                 represented_count=sum(
                     role_key in role_averages
-                    for role_key in definition['weights']
+                    for role_key in definition['effects']
                 ),
                 assumed_neutral_count=sum(
                     role_key in non_participating_role_keys
-                    for role_key in definition['weights']
+                    for role_key in definition['effects']
                 ),
-                possible_count=len(definition['weights']),
+                possible_count=len(definition['effects']),
             )
         )
 
@@ -312,6 +414,7 @@ def role_rows(players):
         rows.append(
             dict(
                 name=role['name'],
+                incentive=role['incentive'],
                 question=role['question'],
                 n=len(role_players),
                 mean=(

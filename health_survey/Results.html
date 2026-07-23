@@ -19,7 +19,6 @@ Healthcare-system impact
         border: 1px solid #dce4e5;
         border-radius: 14px;
         padding: 1.35rem;
-        text-align: center;
         background: #fff;
         box-shadow: 0 5px 18px rgba(22, 54, 60, .06);
     }
@@ -54,15 +53,52 @@ Healthcare-system impact
         color: #183f46;
         font-size: 1.1rem;
         margin: .25rem 0;
+        text-align: center;
     }
-    .metric-card p {
+    .metric-summary {
         color: #65777b;
         font-size: .9rem;
         margin-bottom: .5rem;
+        text-align: center;
     }
     .coverage {
         color: #7b8b8e;
         font-size: .76rem;
+        text-align: center;
+    }
+    .metric-calculation {
+        border-top: 1px solid #e3e9ea;
+        margin-top: 1rem;
+        padding-top: .85rem;
+    }
+    .metric-calculation summary {
+        color: #315b63;
+        cursor: pointer;
+        font-size: .84rem;
+        font-weight: 700;
+    }
+    .metric-calculation p {
+        color: #5c6f73;
+        font-size: .8rem;
+        line-height: 1.45;
+        margin: .65rem 0;
+    }
+    .formula {
+        background: #f4f7f7;
+        border-radius: 7px;
+        color: #294b52;
+        display: block;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: .73rem;
+        line-height: 1.5;
+        overflow-wrap: anywhere;
+        padding: .65rem;
+    }
+    .effect-list {
+        color: #6e7f82;
+        font-size: .74rem;
+        line-height: 1.45;
+        margin-top: .65rem;
     }
     .role-note {
         border-radius: 10px;
@@ -72,9 +108,10 @@ Healthcare-system impact
 </style>
 
 <p class="results-intro">
-    These plots combine the choices made by the stakeholder roles. Scores run
-    from 0 (strong negative impact) to 100 (strong positive impact); a neutral
-    collective choice produces 50.
+    These plots combine the opposing incentives expressed by the stakeholder
+    roles. Scores run from 0 (low alignment, access, or readiness) to 100
+    (high); neutral responses produce 50. Agreement can raise one metric and
+    lower another, depending on the incentive’s expected system effect.
     {{ if test_mode }}
     This test session includes Doctors, Patients, and MedTech; every other
     role is included in the calculation with a neutral score.
@@ -96,7 +133,7 @@ Healthcare-system impact
             </div>
         </div>
         <h3>{{ metric.name }}</h3>
-        <p>{{ metric.short }}</p>
+        <p class="metric-summary">{{ metric.short }}</p>
         <div class="coverage">
             {{ metric.represented_count }} contributing roles responded
             {{ if metric.assumed_neutral_count }}
@@ -104,14 +141,30 @@ Healthcare-system impact
             assumed neutral
             {{ endif }}
         </div>
+        <details class="metric-calculation">
+            <summary>How this metric was calculated</summary>
+            <p>{{ metric.explanation }}</p>
+            <span class="formula">{{ metric.formula }}</span>
+            <p>
+                <strong>Weighted incentive effect:</strong><br>
+                {{ metric.effect_terms }}
+            </p>
+            <p>
+                Each role mean is on the 1–5 scale; eᵣ is its signed effect
+                shown below. Subtracting 3 makes a neutral mean contribute
+                zero.
+            </p>
+            <span class="formula">This result: {{ metric.calculation }}</span>
+            <div class="effect-list">{{ metric.contributors }}</div>
+        </details>
     </article>
     {{ endfor }}
 </div>
 
 <div class="role-note">
-    You contributed as <strong>{{ role.name }}</strong>. The first plot includes
-    every stakeholder role; the other plots include only the roles directly
-    connected to that outcome.
+    You contributed as <strong>{{ role.name }}</strong>. System alignment
+    includes every stakeholder role; the other metrics include only incentives
+    directly connected to that outcome.
 </div>
 
 {{ endblock }}
